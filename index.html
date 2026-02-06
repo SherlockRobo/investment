@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>我的投资组合定投计算器</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-primary: #e0e0e0;
+            --accent-green: #26a69a;
+            --accent-red: #ef5350;
+            --border-color: #333;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 900px;
+        }
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        h2 { border-left: 4px solid var(--accent-green); padding-left: 10px; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        th { color: #888; font-weight: 500; }
+        input {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            color: white;
+            padding: 5px;
+            border-radius: 4px;
+            width: 80px;
+        }
+        .summary {
+            display: flex;
+            justify-content: space-between;
+            background: #252525;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .highlight { color: var(--accent-green); font-weight: bold; font-size: 1.2em; }
+        .dca-section {
+            background: #1a2a2a;
+            border: 1px solid var(--accent-green);
+        }
+        button {
+            background: var(--accent-green);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover { opacity: 0.9; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>📊 投资组合实时概览 (模拟)</h2>
+    
+    <div class="card">
+        <div class="summary">
+            <div>总市值 (折合USD): <span id="total-value" class="highlight">0.00</span></div>
+            <div>汇率 (HKD/USD): <input type="number" id="fx-rate" value="0.128" step="0.001" onchange="calculate()"></div>
+        </div>
+        
+        <table id="portfolio-table">
+            <thead>
+                <tr>
+                    <th>名称代码</th>
+                    <th>现价 (USD)</th>
+                    <th>持仓数量</th>
+                    <th>市值 (USD)</th>
+                    <th>当前占比</th>
+                    <th>目标占比 (%)</th>
+                </tr>
+            </thead>
+            <tbody id="portfolio-body">
+                <tr>
+                    <td>TSLA</td>
+                    <td><input type="number" class="price" value="403.25"></td>
+                    <td><input type="number" class="qty" value="15"></td>
+                    <td class="mv">0</td>
+                    <td class="weight">0%</td>
+                    <td><input type="number" class="target" value="40"></td>
+                </tr>
+                <tr>
+                    <td>AAPL</td>
+                    <td><input type="number" class="price" value="274.03"></td>
+                    <td><input type="number" class="qty" value="10"></td>
+                    <td class="mv">0</td>
+                    <td class="weight">0%</td>
+                    <td><input type="number" class="target" value="20"></td>
+                </tr>
+                <tr>
+                    <td>QQQM</td>
+                    <td><input type="number" class="price" value="246.89"></td>
+                    <td><input type="number" class="qty" value="5.06"></td>
+                    <td class="mv">0</td>
+                    <td class="weight">0%</td>
+                    <td><input type="number" class="target" value="20"></td>
+                </tr>
+                <tr>
+                    <td>HK:2800 (USD)</td>
+                    <td><input type="number" class="price" value="3.42"></td>
+                    <td><input type="number" class="qty" value="60"></td>
+                    <td class="mv">0</td>
+                    <td class="weight">0%</td>
+                    <td><input type="number" class="target" value="20"></td>
+                </tr>
+            </tbody>
+        </table>
+        <button onclick="calculate()">刷新计算</button>
+    </div>
+
+    <h2>🗓️ 定投策略计算器</h2>
+    <div class="card dca-section">
+        <div style="margin-bottom: 15px;">
+            每月计划定投总额 (USD): 
+            <input type="number" id="monthly-budget" value="1000" style="width: 120px; font-size: 1.1em;">
+        </div>
+        
+        <h3>本次定投分配建议:</h3>
+        <table id="dca-table">
+            <thead>
+                <tr>
+                    <th>资产</th>
+                    <th>分配金额 (USD)</th>
+                    <th>预计可买股数</th>
+                    <th>说明</th>
+                </tr>
+            </thead>
+            <tbody id="dca-body">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    function calculate() {
+        const rows = document.querySelectorAll('#portfolio-body tr');
+        const fxRate = parseFloat(document.getElementById('fx-rate').value);
+        const budget = parseFloat(document.getElementById('monthly-budget').value);
+        
+        let totalValue = 0;
+        let data = [];
+
+        // 1. 计算当前各资产市值和总市值
+        rows.forEach(row => {
+            const price = parseFloat(row.querySelector('.price').value);
+            const qty = parseFloat(row.querySelector('.qty').value);
+            const target = parseFloat(row.querySelector('.target').value);
+            const mv = price * qty;
+            totalValue += mv;
+            
+            data.push({
+                name: row.cells[0].innerText,
+                price,
+                qty,
+                mv,
+                target
+            });
+        });
+
+        document.getElementById('total-value').innerText = totalValue.toFixed(2);
+
+        // 2. 更新表格中的占比
+        rows.forEach((row, index) => {
+            const weight = (data[index].mv / totalValue * 100).toFixed(1);
+            row.querySelector('.mv').innerText = data[index].mv.toFixed(2);
+            row.querySelector('.weight').innerText = weight + '%';
+        });
+
+        // 3. 计算定投分配 (根据目标比例平衡)
+        const dcaBody = document.getElementById('dca-body');
+        dcaBody.innerHTML = '';
+        
+        data.forEach(item => {
+            const dcaAmount = budget * (item.target / 100);
+            const buyQty = (dcaAmount / item.price).toFixed(2);
+            
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${item.name}</td>
+                <td style="color: var(--accent-green)">$ ${dcaAmount.toFixed(2)}</td>
+                <td>${buyQty}</td>
+                <td>按 ${item.target}% 目标分配</td>
+            `;
+            dcaBody.appendChild(tr);
+        });
+    }
+
+    // 初始化计算一次
+    window.onload = calculate;
+</script>
+
+</body>
+</html>
