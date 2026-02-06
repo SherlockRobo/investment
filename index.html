@@ -2,159 +2,120 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>我的投资组合定投计算器</title>
+    <title>投资组合定投计算器 (HKD版)</title>
     <style>
         :root {
-            --bg-color: #121212;
-            --card-bg: #1e1e1e;
-            --text-primary: #e0e0e0;
-            --accent-green: #26a69a;
-            --accent-red: #ef5350;
-            --border-color: #333;
+            --bg-color: #0f111a;
+            --card-bg: #1a1d2e;
+            --text-primary: #e6edf3;
+            --up-color: #26a69a; /* 涨/盈 */
+            --down-color: #ef5350; /* 跌/亏 */
+            --border: #30363d;
         }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-primary);
-            margin: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .container {
-            width: 100%;
-            max-width: 900px;
-        }
-        .card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        }
-        h2 { border-left: 4px solid var(--accent-green); padding-left: 10px; }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid var(--border-color);
-        }
-        th { color: #888; font-weight: 500; }
-        input {
-            background: #2a2a2a;
-            border: 1px solid #444;
-            color: white;
-            padding: 5px;
-            border-radius: 4px;
-            width: 80px;
-        }
-        .summary {
-            display: flex;
-            justify-content: space-between;
-            background: #252525;
-            padding: 15px;
-            border-radius: 8px;
-        }
-        .highlight { color: var(--accent-green); font-weight: bold; font-size: 1.2em; }
-        .dca-section {
-            background: #1a2a2a;
-            border: 1px solid var(--accent-green);
-        }
-        button {
-            background: var(--accent-green);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        button:hover { opacity: 0.9; }
+        body { font-family: sans-serif; background: var(--bg-color); color: var(--text-primary); padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .card { background: var(--card-bg); border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid var(--border); }
+        h2 { margin-top: 0; color: #58a6ff; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 0.9em; }
+        th { text-align: left; color: #8b949e; border-bottom: 1px solid var(--border); padding: 10px; }
+        td { padding: 12px 10px; border-bottom: 1px solid #2d333b; }
+        input { background: #0d1117; border: 1px solid var(--border); color: white; padding: 4px 8px; border-radius: 4px; width: 70px; }
+        .tag { padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-right: 5px; }
+        .tag-us { background: #4a3aff; color: white; }
+        .tag-hk { background: #ff3a3a; color: white; }
+        .positive { color: var(--up-color); }
+        .negative { color: var(--down-color); }
+        .summary-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 15px; }
+        .stat-box { background: #21262d; padding: 15px; border-radius: 8px; text-align: center; }
+        .stat-val { font-size: 1.4em; font-weight: bold; display: block; margin-top: 5px; }
+        button { background: #238636; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #2ea043; }
+        .refresh-btn { background: #1f6feb; margin-left: 10px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>📊 投资组合实时概览 (模拟)</h2>
-    
     <div class="card">
-        <div class="summary">
-            <div>总市值 (折合USD): <span id="total-value" class="highlight">0.00</span></div>
-            <div>汇率 (HKD/USD): <input type="number" id="fx-rate" value="0.128" step="0.001" onchange="calculate()"></div>
+        <h2>📊 我的资产概览 (Base: HKD)</h2>
+        <div class="summary-grid">
+            <div class="stat-box">总市值 (HKD) <span id="total-hkd" class="stat-val">0.00</span></div>
+            <div class="stat-box">今日总盈亏 (HKD) <span id="total-pnl" class="stat-val">--</span></div>
+            <div class="stat-box">USD/HKD 汇率 <input type="number" id="fx-rate" value="7.82" step="0.01" style="width:60px" onchange="calculate()"></div>
         </div>
-        
+
         <table id="portfolio-table">
             <thead>
                 <tr>
-                    <th>名称代码</th>
-                    <th>现价 (USD)</th>
+                    <th>市场/代码</th>
+                    <th>现价 (原币)</th>
+                    <th>成本价</th>
                     <th>持仓数量</th>
-                    <th>市值 (USD)</th>
-                    <th>当前占比</th>
-                    <th>目标占比 (%)</th>
+                    <th>市值 (HKD)</th>
+                    <th>收益率 (ROI)</th>
+                    <th>目标占比%</th>
                 </tr>
             </thead>
             <tbody id="portfolio-body">
-                <tr>
-                    <td>TSLA</td>
+                <tr data-market="US">
+                    <td><span class="tag tag-us">美股</span>TSLA</td>
                     <td><input type="number" class="price" value="403.25"></td>
+                    <td><input type="number" class="cost" value="229.99"></td>
                     <td><input type="number" class="qty" value="15"></td>
-                    <td class="mv">0</td>
-                    <td class="weight">0%</td>
+                    <td class="mv-hkd">0</td>
+                    <td class="roi">0%</td>
                     <td><input type="number" class="target" value="40"></td>
                 </tr>
-                <tr>
-                    <td>AAPL</td>
+                <tr data-market="US">
+                    <td><span class="tag tag-us">美股</span>AAPL</td>
                     <td><input type="number" class="price" value="274.03"></td>
+                    <td><input type="number" class="cost" value="139.72"></td>
                     <td><input type="number" class="qty" value="10"></td>
-                    <td class="mv">0</td>
-                    <td class="weight">0%</td>
+                    <td class="mv-hkd">0</td>
+                    <td class="roi">0%</td>
                     <td><input type="number" class="target" value="20"></td>
                 </tr>
-                <tr>
-                    <td>QQQM</td>
-                    <td><input type="number" class="price" value="246.89"></td>
-                    <td><input type="number" class="qty" value="5.06"></td>
-                    <td class="mv">0</td>
-                    <td class="weight">0%</td>
-                    <td><input type="number" class="target" value="20"></td>
-                </tr>
-                <tr>
-                    <td>HK:2800 (USD)</td>
-                    <td><input type="number" class="price" value="3.42"></td>
+                <tr data-market="HK">
+                    <td><span class="tag tag-hk">港股</span>02800</td>
+                    <td><input type="number" class="price" value="26.76"></td>
+                    <td><input type="number" class="cost" value="27.59"></td>
                     <td><input type="number" class="qty" value="60"></td>
-                    <td class="mv">0</td>
-                    <td class="weight">0%</td>
+                    <td class="mv-hkd">0</td>
+                    <td class="roi">0%</td>
+                    <td><input type="number" class="target" value="20"></td>
+                </tr>
+                <tr data-market="HK">
+                    <td><span class="tag tag-hk">港股</span>03067</td>
+                    <td><input type="number" class="price" value="11.20"></td>
+                    <td><input type="number" class="cost" value="11.91"></td>
+                    <td><input type="number" class="qty" value="100"></td>
+                    <td class="mv-hkd">0</td>
+                    <td class="roi">0%</td>
                     <td><input type="number" class="target" value="20"></td>
                 </tr>
             </tbody>
         </table>
-        <button onclick="calculate()">刷新计算</button>
+        <button onclick="calculate()">🔄 手动更新计算</button>
+        <button class="refresh-btn" onclick="fetchLivePrices()">🌐 尝试刷新市价</button>
+        <small style="color:#8b949e; margin-left:10px;">*刷新市价需要配置API（代码内可见）</small>
     </div>
 
-    <h2>🗓️ 定投策略计算器</h2>
-    <div class="card dca-section">
+    <div class="card" style="border-color: #238636;">
+        <h2>🗓️ 定投方案 (HKD)</h2>
         <div style="margin-bottom: 15px;">
-            每月计划定投总额 (USD): 
-            <input type="number" id="monthly-budget" value="1000" style="width: 120px; font-size: 1.1em;">
+            每月计划定投总额 (HKD): 
+            <input type="number" id="monthly-budget-hkd" value="5000" style="width: 100px; font-size: 1.1em;">
         </div>
-        
-        <h3>本次定投分配建议:</h3>
         <table id="dca-table">
             <thead>
                 <tr>
-                    <th>资产</th>
-                    <th>分配金额 (USD)</th>
-                    <th>预计可买股数</th>
-                    <th>说明</th>
+                    <th>标的</th>
+                    <th>分配金额 (HKD)</th>
+                    <th>预计可买数</th>
+                    <th>当前权重 vs 目标</th>
                 </tr>
             </thead>
-            <tbody id="dca-body">
-                </tbody>
+            <tbody id="dca-body"></tbody>
         </table>
     </div>
 </div>
@@ -163,57 +124,78 @@
     function calculate() {
         const rows = document.querySelectorAll('#portfolio-body tr');
         const fxRate = parseFloat(document.getElementById('fx-rate').value);
-        const budget = parseFloat(document.getElementById('monthly-budget').value);
+        const budgetHkd = parseFloat(document.getElementById('monthly-budget-hkd').value);
         
-        let totalValue = 0;
-        let data = [];
+        let totalHkdValue = 0;
+        let portfolioData = [];
 
-        // 1. 计算当前各资产市值和总市值
         rows.forEach(row => {
+            const market = row.getAttribute('data-market');
             const price = parseFloat(row.querySelector('.price').value);
+            const cost = parseFloat(row.querySelector('.cost').value);
             const qty = parseFloat(row.querySelector('.qty').value);
             const target = parseFloat(row.querySelector('.target').value);
-            const mv = price * qty;
-            totalValue += mv;
-            
-            data.push({
+
+            // 转换汇率 (如果是美股则乘汇率)
+            const priceHkd = market === 'US' ? price * fxRate : price;
+            const mvHkd = priceHkd * qty;
+            totalHkdValue += mvHkd;
+
+            // 计算收益率
+            const roi = ((price - cost) / cost * 100).toFixed(2);
+            const roiCell = row.querySelector('.roi');
+            roiCell.innerText = roi + '%';
+            roiCell.className = 'roi ' + (roi >= 0 ? 'positive' : 'negative');
+
+            row.querySelector('.mv-hkd').innerText = mvHkd.toLocaleString(undefined, {minimumFractionDigits: 2});
+
+            portfolioData.push({
                 name: row.cells[0].innerText,
-                price,
-                qty,
-                mv,
-                target
+                priceHkd,
+                mvHkd,
+                target,
+                market
             });
         });
 
-        document.getElementById('total-value').innerText = totalValue.toFixed(2);
+        document.getElementById('total-hkd').innerText = totalHkdValue.toLocaleString();
 
-        // 2. 更新表格中的占比
-        rows.forEach((row, index) => {
-            const weight = (data[index].mv / totalValue * 100).toFixed(1);
-            row.querySelector('.mv').innerText = data[index].mv.toFixed(2);
-            row.querySelector('.weight').innerText = weight + '%';
-        });
-
-        // 3. 计算定投分配 (根据目标比例平衡)
+        // 更新定投建议
         const dcaBody = document.getElementById('dca-body');
         dcaBody.innerHTML = '';
         
-        data.forEach(item => {
-            const dcaAmount = budget * (item.target / 100);
-            const buyQty = (dcaAmount / item.price).toFixed(2);
-            
+        portfolioData.forEach(item => {
+            const dcaAmountHkd = budgetHkd * (item.target / 100);
+            const buyQty = (dcaAmountHkd / item.priceHkd).toFixed(2);
+            const currentWeight = (item.mvHkd / totalHkdValue * 100).toFixed(1);
+
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${item.name}</td>
-                <td style="color: var(--accent-green)">$ ${dcaAmount.toFixed(2)}</td>
-                <td>${buyQty}</td>
-                <td>按 ${item.target}% 目标分配</td>
+                <td class="positive">HK$ ${dcaAmountHkd.toFixed(0)}</td>
+                <td>${buyQty} 股</td>
+                <td>${currentWeight}% / ${item.target}%</td>
             `;
             dcaBody.appendChild(tr);
         });
     }
 
-    // 初始化计算一次
+    // 模拟或调用 API 刷新价格
+    async function fetchLivePrices() {
+        alert("正在尝试获取最新价格...\n(注意：浏览器直接请求金融API通常有跨域限制，此处演示逻辑)");
+        
+        // 这里可以使用 Finnhub 免费 API (需申请Key)
+        // 演示：随机波动一下价格代表“刷新成功”
+        const rows = document.querySelectorAll('#portfolio-body tr');
+        rows.forEach(row => {
+            const input = row.querySelector('.price');
+            const oldPrice = parseFloat(input.value);
+            const change = (Math.random() - 0.5) * 2; // 模拟波动
+            input.value = (oldPrice + change).toFixed(2);
+        });
+        calculate();
+    }
+
     window.onload = calculate;
 </script>
 
